@@ -411,7 +411,7 @@ namespace Hayden
 								var matched = false;
 								foreach (var filter in boardConfig.Filters)
 								{
-									if (Regex.IsMatch(thread.Comment, filter, RegexOptions.IgnoreCase))
+									if (!String.IsNullOrEmpty(thread.Comment) && Regex.IsMatch(thread.Comment, filter, RegexOptions.IgnoreCase))
 									{
 										matched = true;
 										break;
