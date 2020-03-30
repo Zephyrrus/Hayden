@@ -1,0 +1,2 @@
+# ensure all source files are normalized to LF on commit
+* text eol=lf

@@ -33,7 +33,9 @@ namespace Hayden.Cache
 		}
 
 		/// <inheritdoc/>
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
 		public async Task WriteDownloadQueue(IList<QueuedImageDownload> imageDownloads)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 		{
 			List<QueuedImageDownload> downloads = QueuedImageDownloads.FindAll().ToList();
 
@@ -44,7 +46,9 @@ namespace Hayden.Cache
 		}
 
 		/// <inheritdoc/>
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
 		public async Task<IList<QueuedImageDownload>> GetDownloadQueue()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 		{
 			return QueuedImageDownloads.FindAll().ToArray();
 		}

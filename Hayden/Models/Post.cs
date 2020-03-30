@@ -122,8 +122,8 @@ namespace Hayden.Models
 		//[JsonProperty("capcode_replies")]
 		//public Dictionary<string, int[]> CapcodeReplies { get; set; }
 
-		//[JsonProperty("last_modified")]
-		//public uint? LastModified { get; set; }
+		[JsonProperty("last_modified")]
+		public uint? LastModified { get; set; }
 
 		//[JsonProperty("tag")]
 		//public string Tag { get; set; }

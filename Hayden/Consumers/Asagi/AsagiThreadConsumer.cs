@@ -29,7 +29,7 @@ namespace Hayden.Consumers
 
 		/// <param name="config">The object to load configuration values from.</param>
 		/// <param name="boards">The boards that will be archived.</param>
-		public AsagiThreadConsumer(AsagiConfig config, string[] boards)
+		public AsagiThreadConsumer(AsagiConfig config, IDictionary<string, YotsubaBoardConfig> boards)
 		{
 			Config = config;
 			ConnectionPool = new MySqlConnectionPool(config.ConnectionString, config.SqlConnectionPoolSize);
@@ -39,7 +39,7 @@ namespace Hayden.Consumers
 
 			foreach (var board in boards)
 			{
-				CreateTables(board).Wait();
+				CreateTables(board.Key).Wait();
 			}
 
 			Directory.CreateDirectory(ThumbDownloadLocation);

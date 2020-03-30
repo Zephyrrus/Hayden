@@ -47,6 +47,18 @@ namespace Hayden
 		}
 
 		/// <summary>
+		/// Retrieves a list of a board's threads from the 4chan API (including contents)
+		/// </summary>
+		/// <param name="board">The board of the thread.</param>
+		/// <param name="client">The <see cref="HttpClient"/> to make this request with.</param>
+		/// <param name="modifiedSince">The value to use in the If-Modified-Since header. Returns NotModified if the thread has not been updated since this time.</param>
+		/// <param name="cancellationToken">The cancellation token to use with this request.</param>
+		public static Task<ApiResponse<Catalog[]>> GetCatalog(string board, HttpClient client, DateTimeOffset? modifiedSince = null, CancellationToken cancellationToken = default)
+		{
+			return MakeYotsubaApiCall<Catalog[]>(new Uri($"https://a.4cdn.org/{board}/catalog.json"), client, modifiedSince, cancellationToken);
+
+		}
+		/// <summary>
 		/// Retrieves a list of a board's threads from the 4chan API.
 		/// </summary>
 		/// <param name="board">The board of the thread.</param>

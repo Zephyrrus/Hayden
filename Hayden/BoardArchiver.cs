@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using Hayden.Api;
 using Hayden.Cache;
 using Hayden.Config;
@@ -61,12 +62,14 @@ namespace Hayden
 			Queue<QueuedImageDownload> enqueuedImages = new Queue<QueuedImageDownload>();
 			List<QueuedImageDownload> requeuedImages = new List<QueuedImageDownload>();
 
-			SortedList<string, DateTimeOffset> lastBoardCheckTimes = new SortedList<string, DateTimeOffset>(Config.Boards.Length);
+			SortedList<string, DateTimeOffset> lastBoardCheckTimes = new SortedList<string, DateTimeOffset>(Config.Boards.Keys.Count);
 
 			while (!token.IsCancellationRequested)
 			{
-				await Config.Boards.ForEachAsync(4, async board =>
+				await Config.Boards.ForEachAsync(4, async boardConfig =>
 				{
+					var board = boardConfig.Key;
+
 					DateTimeOffset lastDateTimeCheck;
 
 					lock (lastBoardCheckTimes)
@@ -80,7 +83,7 @@ namespace Hayden
 					lock (threadQueue)
 						threadQueue.AddRange(threads);
 
-					if (firstRun)
+					if (firstRun && boardConfig.Value.ArchivesEnabled)
 					{
 						var archivedThreads = await GetArchivedBoardThreads(token, board, lastDateTimeCheck);
 
@@ -358,15 +361,18 @@ namespace Hayden
 
 			var threads = new List<ThreadPointer>();
 
-			var pagesRequest = await NetworkPolicies.GenericRetryPolicy<ApiResponse<Page[]>>(12).ExecuteAsync(async () =>
+			var pagesRequest = await NetworkPolicies.GenericRetryPolicy<ApiResponse<Catalog[]>>(12).ExecuteAsync(async () =>
 			{
 				Program.Log($"Requesting threads from board /{board}/...");
 				await using var boardClient = await ProxyProvider.RentHttpClient();
-				return await YotsubaApi.GetBoard(board,
+				return await YotsubaApi.GetCatalog(board,
 					boardClient.Object.Client,
 					lastDateTimeCheck,
 					token);
 			});
+
+			YotsubaBoardConfig boardConfig;
+			var hasBoardConfig = Config.Boards.TryGetValue(board, out boardConfig);
 
 			switch (pagesRequest.ResponseType)
 			{
@@ -376,14 +382,14 @@ namespace Hayden
 
 					if (firstRun)
 					{
-						var existingThreads = await ThreadConsumer.CheckExistingThreads(threadList.Select(x => x.ThreadNumber),
+						var existingThreads = await ThreadConsumer.CheckExistingThreads(threadList.Select(x => x.PostNumber),
 							board,
 							false,
 							true);
 
 						foreach (var existingThread in existingThreads)
 						{
-							var thread = threadList.First(x => x.ThreadNumber == existingThread.threadId);
+							var thread = threadList.First(x => x.PostNumber == existingThread.threadId);
 
 							if (thread.LastModified <= Utility.GetGMTTimestamp(existingThread.lastPostTime))
 							{
@@ -400,11 +406,29 @@ namespace Hayden
 					{
 						if (thread.LastModified > lastCheckTimestamp)
 						{
-							threads.Add(new ThreadPointer(board, thread.ThreadNumber));
+							if (hasBoardConfig && boardConfig.Filters != null)
+							{
+								var matched = false;
+								foreach (var filter in boardConfig.Filters)
+								{
+									if (Regex.IsMatch(thread.Comment, filter, RegexOptions.IgnoreCase))
+									{
+										matched = true;
+										break;
+									}
+								}
+
+								if (!matched)
+								{
+									continue;
+								}
+							}
+
+							threads.Add(new ThreadPointer(board, thread.PostNumber));
 						}
 					}
 
-					Program.Log($"Enqueued {threads.Count} threads from board /{board}/ past timestamp {lastCheckTimestamp}");
+					Program.Log($"Enqueued {threads.Count} ({threadList.Count - threads.Count} dropped) threads from board /{board}/ past timestamp {lastCheckTimestamp}");
 
 					break;
 
